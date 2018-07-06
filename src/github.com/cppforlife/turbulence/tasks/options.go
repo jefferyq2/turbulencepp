@@ -44,6 +44,10 @@ func (s *OptionsSlice) UnmarshalJSON(data []byte) error {
 				var o KillProcessOptions
 				err, opts = json.Unmarshal(bytes, &o), o
 
+			case optType == OptionsType(PauseProcessOptions{}):
+				var o PauseProcessOptions
+				err, opts = json.Unmarshal(bytes, &o), o
+
 			case optType == OptionsType(StressOptions{}):
 				var o StressOptions
 				err, opts = json.Unmarshal(bytes, &o), o
@@ -93,6 +97,10 @@ func (s OptionsSlice) MarshalJSON() ([]byte, error) {
 			s[i] = typedO
 
 		case KillProcessOptions:
+			typedO.Type = OptionsType(typedO)
+			s[i] = typedO
+
+		case PauseProcessOptions:
 			typedO.Type = OptionsType(typedO)
 			s[i] = typedO
 
