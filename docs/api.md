@@ -208,6 +208,25 @@ Example:
 }
 ```
 
+### Pause Process
+
+Pause one or more process on the VM associated with an instance.
+
+Configuration:
+
+- set `ProcessName`(string) to a pattern used with `pkill`
+- set `timeout` (string) to how long the process should remain paused. A valid timeout is required.
+
+Example:
+
+```json
+{
+	"Type": "PauseProcess",
+	"ProcessName": "sshd"
+	"Timeout": "10m" // Times may be suffixed with s,m,h,d,y
+}
+```
+
 ### Stress
 
 Stresses different subsystems on the VM associated with an instance.
