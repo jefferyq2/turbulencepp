@@ -222,7 +222,7 @@ Example:
 ```json
 {
 	"Type": "PauseProcess",
-	"ProcessName": "sshd"
+	"ProcessName": "sshd",
 	"Timeout": "10m" // Times may be suffixed with s,m,h,d,y
 }
 ```
