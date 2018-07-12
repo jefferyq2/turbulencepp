@@ -48,6 +48,8 @@ func (t ControlNetTask) Execute(stopCh chan struct{}) error {
 		return err
 	}
 
+	opts := make([]string, 0, 16)
+
 	if len(t.opts.Delay) > 0 {
 		variation := t.opts.DelayVariation
 
@@ -55,12 +57,7 @@ func (t ControlNetTask) Execute(stopCh chan struct{}) error {
 			variation = "10ms"
 		}
 
-		for _, ifaceName := range ifaceNames {
-			err := t.configureDelay(ifaceName, t.opts.Delay, variation)
-			if err != nil {
-				return err
-			}
-		}
+		opts = append(opts, "delay", t.opts.Delay, variation, "distribution", "normal")
 	}
 
 	if len(t.opts.Loss) > 0 {
@@ -70,11 +67,13 @@ func (t ControlNetTask) Execute(stopCh chan struct{}) error {
 			correlation = "75%"
 		}
 
-		for _, ifaceName := range ifaceNames {
-			err := t.configurePacketLoss(ifaceName, t.opts.Loss, correlation)
-			if err != nil {
-				return err
-			}
+		opts = append(opts, "loss", t.opts.Loss, correlation)
+	}
+
+	for _, ifaceName := range ifaceNames {
+		err := t.configureInterface(ifaceName, opts)
+		if err != nil {
+			return err
 		}
 	}
 
@@ -93,29 +92,13 @@ func (t ControlNetTask) Execute(stopCh chan struct{}) error {
 	return nil
 }
 
-func (t ControlNetTask) configureDelay(ifaceName, delay, variation string) error {
-	args := []string{
-		"qdisc", "add", "dev", ifaceName, "root",
-		"netem", "delay", delay, variation, "distribution", "normal",
-	}
+func (t ControlNetTask) configureInterface(ifaceName string, opts []string) error {
+	args := []string{"qdisc", "add", "dev", ifaceName, "root", "netem"}
+	args = append(args, opts...)
 
 	_, _, _, err := t.cmdRunner.RunCommand("tc", args...)
 	if err != nil {
-		return bosherr.WrapError(err, "Shelling out to tc to add delay")
-	}
-
-	return nil
-}
-
-func (t ControlNetTask) configurePacketLoss(ifaceName, percent, correlation string) error {
-	args := []string{
-		"qdisc", "add", "dev", ifaceName, "root",
-		"netem", "loss", percent, correlation,
-	}
-
-	_, _, _, err := t.cmdRunner.RunCommand("tc", args...)
-	if err != nil {
-		return bosherr.WrapError(err, "Shelling out to tc to add packet loss")
+		return bosherr.WrapError(err, "Shelling out to tc netem")
 	}
 
 	return nil
