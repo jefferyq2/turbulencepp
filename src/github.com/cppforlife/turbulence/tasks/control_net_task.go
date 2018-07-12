@@ -27,7 +27,7 @@ type ControlNetOptions struct {
 	Corruption string
 
 	// tc qdisc add dec eth0 root netem reorder 25% 50%
-	Reorder			   string
+	Reorder            string
 	ReorderCorrelation string
 
 	// tc qdisc add dev eth0 root handle 1:0 [netem...]
@@ -62,8 +62,8 @@ func (t ControlNetTask) Execute(stopCh chan struct{}) error {
 		return err
 	}
 
-	delay, loss, duplication, corruption, reorder, bandwidth := len(t.opts.Delay) == 0, len(t.opts.Loss) == 0, len(t.opts.Duplication) == 0, len(t.opts.Corruption) == 0, len(t.opts.Reorder) == 0, len(t.opts.Bandwidth) == 0
-	
+	delay, loss, duplication, corruption, reorder, bandwidth := len(t.opts.Delay) > 0, len(t.opts.Loss) > 0, len(t.opts.Duplication) > 0, len(t.opts.Corruption) > 0, len(t.opts.Reorder) > 0, len(t.opts.Bandwidth) > 0
+
 	if !(delay || loss || duplication || corruption || reorder || bandwidth) {
 		return bosherr.Error("Must specify an effect")
 	}
@@ -87,25 +87,25 @@ func (t ControlNetTask) Execute(stopCh chan struct{}) error {
 		}
 	} else {
 		opts := make([]string, 0, 16)
-		
+
 		if delay {
 			variation := defaultStr(t.opts.DelayVariation, "10ms")
 			opts = append(opts, "delay", t.opts.Delay, variation, "distribution", "normal")
 		}
-	
+
 		if loss {
 			correlation := defaultStr(t.opts.LossCorrelation, "75%")
 			opts = append(opts, "loss", t.opts.Loss, correlation)
 		}
-	
+
 		if duplication {
 			opts = append(opts, "duplicate", t.opts.Duplication)
 		}
-	
+
 		if corruption {
 			opts = append(opts, "corrupt", t.opts.Corruption)
 		}
-	
+
 		if reorder {
 			correlation := defaultStr(t.opts.ReorderCorrelation, "50%")
 			opts = append(opts, "reorder", t.opts.Reorder, correlation)
