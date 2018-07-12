@@ -310,7 +310,9 @@ One or both of the following configurations must be selected:
   - set `ReorderCorrelation` (string; optional). Must be suffixed with `%`. Default is `50%`.
   - if the `Delay` is less than the inter-packet arrival time, then no reordering will be observed.
   
-
+- bandwidth limiting
+  - set `Bandwidth` (string; required). Must be suffixed with one of `kbps`, `mbps` or `gbps`.
+  - bandwidth limiting must be used without any other effects.
 
 Example:
 
