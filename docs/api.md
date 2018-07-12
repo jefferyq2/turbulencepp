@@ -293,10 +293,24 @@ One or both of the following configurations must be selected:
 - packet delay
   - set `Delay` (string; required). Must be suffixed with `ms`.
   - set `DelayVariation` (string; optional). Must be suffixed with `ms`. Default is `10ms`.
+  - if `DelayVariation >= 0.5*Delay`, then packet reordering may occur.
 
 - packet loss
   - set `Loss` (string; required). Must be suffixed with `%`.
   - set `LossCorrelation` (string; optional). Must be suffixed with `%`. Default is `75%`.
+  
+- packet duplication
+  - set `Duplication` (string; required). Must be suffixed with `%`.
+  
+- packet corruption
+  - set `Corruption` (string; required). Must be suffixed with `%`.
+  
+- packet reordering
+  - set `Reorder` (string; required). Must be suffixed with `%`.
+  - set `ReorderCorrelation` (string; optional). Must be suffixed with `%`. Default is `50%`.
+  - if the `Delay` is less than the inter-packet arrival time, then no reordering will be observed.
+  
+
 
 Example:
 
