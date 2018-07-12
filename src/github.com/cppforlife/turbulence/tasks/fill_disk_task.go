@@ -8,6 +8,7 @@ import (
 
 type FillDiskOptions struct {
 	Type string
+	Timeout string
 
 	// todo to percentage
 
@@ -29,26 +30,53 @@ func NewFillDiskTask(cmdRunner boshsys.CmdRunner, opts FillDiskOptions, _ boshlo
 }
 
 func (t FillDiskTask) Execute(stopCh chan struct{}) error {
+	timeoutCh, err := NewOptionalTimeoutCh(t.opts.Timeout)
+	if err != nil {
+		return err
+	}
+
 	if t.opts.Persistent {
-		return t.fill("/var/vcap/store/.filler")
+		err = t.fill("/var/vcap/store/.filler")
+	} else if t.opts.Ephemeral {
+		err = t.fill("/var/vcap/data/.filler")
+	} else if t.opts.Temporary {
+		err = t.fill("/tmp/.filler")
+	} else {
+		err = t.fill("/.filler")
 	}
 
-	if t.opts.Ephemeral {
-		return t.fill("/var/vcap/data/.filler")
+	if err != nil {
+		return err
 	}
 
-	if t.opts.Temporary {
-		return t.fill("/tmp/.filler")
+	select {
+	case <-stopCh:
+	case <-timeoutCh:
 	}
 
-	return t.fill("/.filler")
+	if t.opts.Persistent {
+		err = t.remove("/var/vcap/store/.filler")
+	} else if t.opts.Ephemeral {
+		err = t.remove("/var/vcap/data/.filler")
+	} else if t.opts.Temporary {
+		err = t.remove("/tmp/.filler")
+	} else {
+		err = t.remove("/.filler")
+	}
+
+	return err
 }
 
 func (t FillDiskTask) fill(path string) error {
 	_, _, _, err := t.cmdRunner.RunCommand("dd", "if=/dev/zero", "of="+path, "bs=1M")
-	if err != nil {
+	if err != nil && err.Error() != "dd: error writing ‘" + path + "’: No space left on device" {
 		return bosherr.WrapError(err, "Filling disk")
 	}
 
 	return nil
+}
+
+func (t FillDiskTask) remove(path string) error {
+	_, _, _, err := t.cmdRunner.RunCommand("rm", path)
+	return err
 }
