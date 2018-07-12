@@ -81,7 +81,6 @@ func (t ControlNetTask) Execute(stopCh chan struct{}) error {
 		for _, ifaceName := range ifaceNames {
 			err := t.configureBandwidth(ifaceName)
 			if err != nil {
-				t.resetIface(ifaceName)
 				return err
 			}
 		}
@@ -114,7 +113,6 @@ func (t ControlNetTask) Execute(stopCh chan struct{}) error {
 		for _, ifaceName := range ifaceNames {
 			err := t.configureInterface(ifaceName, opts)
 			if err != nil {
-				t.resetIface(ifaceName)
 				return err
 			}
 		}
@@ -155,11 +153,13 @@ func (t ControlNetTask) configureBandwidth(ifaceName string) error {
 
 	_, _, _, err = t.cmdRunner.RunCommand("tc", "class", "add", "dev", ifaceName, "parent", "1:", "classid", "1:1", "htb", "rate", t.opts.Bandwidth)
 	if err != nil {
+		t.resetIface(ifaceName)
 		return err
 	}
 
 	_, _, _, err = t.cmdRunner.RunCommand("tc", "class", "add", "dev", ifaceName, "parent", "1:1", "classid", "1:11", "htb", "rate", t.opts.Bandwidth)
 	if err != nil {
+		t.resetIface(ifaceName)
 		return err
 	}
 
