@@ -84,7 +84,7 @@ Available selector rules:
   - set `Values` (array of strings; optional)
   - set `Limit` (string; optional)
 
-Limits default to 100%. Name defaults to '*' and wildcard matches are supported.
+Limits default to 100%. Name defaults to '\*' and wildcard matches are supported.
 
 ```json
 {
