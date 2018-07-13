@@ -335,12 +335,14 @@ One of the following configurations must be selected:
 - set `Ephemeral` (bool) to fill up /var/vcap/data
 - set `Temporary` (bool) to fill up /tmp
 - by default uses root disk
+- if multiple are selected, the first one in the above order will be used.
 
 Example:
 
 ```json
 {
 	"Type": "FillDisk",
+	"Timeout": "10m", // Times may be suffixed with ms,s,m,h
 	"Persistent": true
 }
 ```

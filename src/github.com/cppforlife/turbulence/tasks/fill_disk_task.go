@@ -1,7 +1,7 @@
 package tasks
 
 import (
-	bosherr "github.com/cloudfoundry/bosh-utils/errors"
+	// bosherr "github.com/cloudfoundry/bosh-utils/errors"
 	boshlog "github.com/cloudfoundry/bosh-utils/logger"
 	boshsys "github.com/cloudfoundry/bosh-utils/system"
 )
@@ -23,10 +23,13 @@ func (FillDiskOptions) _private() {}
 type FillDiskTask struct {
 	cmdRunner boshsys.CmdRunner
 	opts      FillDiskOptions
+
+	logTag string
+	logger boshlog.Logger
 }
 
-func NewFillDiskTask(cmdRunner boshsys.CmdRunner, opts FillDiskOptions, _ boshlog.Logger) FillDiskTask {
-	return FillDiskTask{cmdRunner, opts}
+func NewFillDiskTask(cmdRunner boshsys.CmdRunner, opts FillDiskOptions, logger boshlog.Logger) FillDiskTask {
+	return FillDiskTask{cmdRunner, opts, "tasks.FillDiskTask", logger}
 }
 
 func (t FillDiskTask) Execute(stopCh chan struct{}) error {
@@ -69,10 +72,11 @@ func (t FillDiskTask) Execute(stopCh chan struct{}) error {
 
 func (t FillDiskTask) fill(path string) error {
 	_, _, _, err := t.cmdRunner.RunCommand("dd", "if=/dev/zero", "of="+path, "bs=1M")
-	if err != nil && err.Error() != "dd: error writing ‘" + path + "’: No space left on device" {
-		return bosherr.WrapError(err, "Filling disk")
+	if err != nil {
+		t.logger.Debug(t.logTag, "Encountered error filling disk: ", err)
 	}
-
+	// don't stop because of an error because it is probably from it running out of disk space which is to be expected
+	
 	return nil
 }
 
