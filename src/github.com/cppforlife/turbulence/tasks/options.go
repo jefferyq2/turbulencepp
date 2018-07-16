@@ -60,6 +60,10 @@ func (s *OptionsSlice) UnmarshalJSON(data []byte) error {
 				var o FirewallOptions
 				err, opts = json.Unmarshal(bytes, &o), o
 
+			case optType == OptionsType(BlockDNSOptions{}):
+				var o BlockDNSOptions
+				err, opts = json.Unmarshal(bytes, &o), o
+
 			case optType == OptionsType(FillDiskOptions{}):
 				var o FillDiskOptions
 				err, opts = json.Unmarshal(bytes, &o), o

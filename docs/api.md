@@ -282,6 +282,21 @@ Example:
 }
 ```
 
+### Block DNS
+
+Causes all outgoing DNS packets to be dropped.
+
+Currently iptables is used for dropping packets going out on tcp or udp port 53.
+
+Example:
+
+```json
+{
+	"Type": "BlockDNS",
+	"Timeout": "10m" // Times may be suffixed with ms,s,m,h
+}
+```
+
 ### Control Network
 
 Controls network quality on the VM associated with an instance. Does not affect `lo0`.
