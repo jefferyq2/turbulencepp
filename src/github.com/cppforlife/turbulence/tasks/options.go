@@ -116,6 +116,10 @@ func (s OptionsSlice) MarshalJSON() ([]byte, error) {
 			typedO.Type = OptionsType(typedO)
 			s[i] = typedO
 
+		case BlockDNSOptions:
+			typedO.Type = OptionsType(typedO)
+			s[i] = typedO
+
 		case FillDiskOptions:
 			typedO.Type = OptionsType(typedO)
 			s[i] = typedO
