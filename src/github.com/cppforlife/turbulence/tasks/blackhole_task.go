@@ -127,7 +127,7 @@ func (t BlackholeTask) rules() ([]string, error) {
 			return nil, bosherr.Errorf("Invalid direction '%v', must be one of {INPUT, OUTPUT, BOTH} or blank.", target.Direction)
 		}
 
-		switch strings.ToLower(target.Direction) {
+		switch strings.ToLower(target.Protocol) {
 		case "":
 			protocol = "all"
 		case "tcp":
@@ -139,7 +139,7 @@ func (t BlackholeTask) rules() ([]string, error) {
 		case "all":
 			protocol = "all"
 		default:
-			return nil, bosherr.Errorf("Invalid protocol '%v', must be one of {tcp, udp, icmp, all} or blank.", target.Direction)
+			return nil, bosherr.Errorf("Invalid protocol '%v', must be one of {tcp, udp, icmp, all} or blank.", target.Protocol)
 		}
 
 		if target.DstPorts == "" {
