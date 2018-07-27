@@ -282,6 +282,42 @@ Example:
 }
 ```
 
+### Blackhole
+
+Drops incoming and or outgoing traffic from one or more VMs. It is able to target specific IPs and Ports to simulate the failure of specific services.
+
+Currently iptables is used for dropping packets from INPUT and OUTPUT chains.
+
+Target parameters:
+
+- set `Host` (string) to either an IPv4 address such as "192.168.1.50" or with a mask such as "192.168.0.0/24", or to a domain name which will be resolved into (possibly multiple) IPs such as "example.com" using the dig command. If no host is specified, then all hosts will be impacted.
+- set `Direction` (string) to the direction of traffic to drop, can be either "INPUT", "OUTPUT", or "BOTH". Defaults to "BOTH".
+- set `Protocol` (string) to the protocol to drop traffic on, can be either "udp", "tcp", "icmp", or "all". Defaults to "all".
+- set `DstPorts` (string) to the destination port to drop. This can be either a single port such as "8080" or a range such as "1503:1520". If blank, all destination ports will be dropped.
+- set `SrcPorts` (string) to the source ports to drop. This can be either a single port such as "8080" or a range such as "1503:1520". If blank, all source ports will be dropped.
+
+*Note*: at least one of `Host`, `DstPorts`, and or `SrcPorts` must be specified.
+
+Example:
+
+```json
+{
+	"Type": "Blackhole",
+	"Timeout": "10m", // Times may be suffixed with ms,s,m,h
+	"Targets": [{
+		"Host": "1.1.1.1",
+		"Direction": "INPUT",
+		"DstPorts": "53"
+	},{
+		"Host": "google.com",
+		"Direction": "BOTH",
+		"Protocol": "tcp",
+		"DstPorts": "80"
+	}]
+}
+```
+
+
 ### Block DNS
 
 Causes all outgoing DNS packets to be dropped.
