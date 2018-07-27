@@ -60,6 +60,10 @@ func (s *OptionsSlice) UnmarshalJSON(data []byte) error {
 				var o FirewallOptions
 				err, opts = json.Unmarshal(bytes, &o), o
 
+			case optType == OptionsType(BlackholeOptions{}):
+				var o BlackholeOptions
+				err, opts = json.Unmarshal(bytes, &o), o
+
 			case optType == OptionsType(BlockDNSOptions{}):
 				var o BlockDNSOptions
 				err, opts = json.Unmarshal(bytes, &o), o
@@ -117,6 +121,10 @@ func (s OptionsSlice) MarshalJSON() ([]byte, error) {
 			s[i] = typedO
 
 		case FirewallOptions:
+			typedO.Type = OptionsType(typedO)
+			s[i] = typedO
+
+		case BlackholeOptions:
 			typedO.Type = OptionsType(typedO)
 			s[i] = typedO
 
