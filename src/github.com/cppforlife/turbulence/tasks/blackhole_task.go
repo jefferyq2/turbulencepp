@@ -180,6 +180,7 @@ func (t BlackholeTask) rules() ([]string, error) {
 				command += " -sport " + sports
 			}
 
+			command += " -j DROP"
 			rules = append(rules, command)
 		}
 
@@ -204,6 +205,7 @@ func (t BlackholeTask) rules() ([]string, error) {
 				command += " -sport " + sports
 			}
 
+			command += " -j DROP"
 			rules = append(rules, command)
 		}
 	}
