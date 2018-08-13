@@ -11,20 +11,20 @@ import (
 	boshsys "github.com/cloudfoundry/bosh-utils/system"
 )
 
-type BlackholeOptions struct {
+type TargetedBlockerOptions struct {
 	Type    string
 	Timeout string // Times may be suffixed with ms,s,m,h
 
-	Targets []BlackholeTarget
+	Targets []Target
 }
 
 var ipPattern = regexp.MustCompile(`(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})(/\d{0,2})?`)
 var portPattern = regexp.MustCompile(`\d+(:\d+)?$`)
 
-// BlackholeTarget defines a rule for iptables. Each rule must contain one of {Host, DstPorts, SrcPorts}.
+// Target defines a rule for iptables. Each rule must contain one of {Host, DstPorts, SrcPorts}.
 // If DstPorts or SrcPorts ports are included without a DstHost or SrcHost, then those ports will be blocked for all hosts.
 // If Host is included without DstPorts or SrcPorts, then all traffic to/from those hosts will be blocked.
-type BlackholeTarget struct {
+type Target struct {
 	// Optional destination host to block, can specify an address such as "10.34.4.60", an address block such as "192.168.0.0/24",
 	// or a domain name such as "google.com" which will be resolved to an Ip.
 	DstHost string
@@ -46,23 +46,23 @@ type BlackholeTarget struct {
 	SrcPorts string
 }
 
-func (BlackholeOptions) _private() {}
+func (TargetedBlockerOptions) _private() {}
 
-type BlackholeTask struct {
+type TargetedBlockerTask struct {
 	cmdRunner boshsys.CmdRunner
-	opts      BlackholeOptions
-	logger	  boshlog.Logger
+	opts      TargetedBlockerOptions
+	logger    boshlog.Logger
 }
 
-func NewBlackholeTask(
+func NewTargetedBlockerTask(
 	cmdRunner boshsys.CmdRunner,
-	opts BlackholeOptions,
+	opts TargetedBlockerOptions,
 	logger boshlog.Logger,
-) BlackholeTask {
-	return BlackholeTask{cmdRunner, opts, logger}
+) TargetedBlockerTask {
+	return TargetedBlockerTask{cmdRunner, opts, logger}
 }
 
-func (t BlackholeTask) Execute(stopCh chan struct{}) error {
+func (t TargetedBlockerTask) Execute(stopCh chan struct{}) error {
 	timeoutCh, err := NewOptionalTimeoutCh(t.opts.Timeout)
 	if err != nil {
 		return err
@@ -74,7 +74,7 @@ func (t BlackholeTask) Execute(stopCh chan struct{}) error {
 	}
 
 	for _, rule := range rules {
-		r := []string{rule[0], "1"}  // we want it inserted at the beginning of the rules or it may have no effect.
+		r := []string{rule[0], "1"} // we want it inserted at the beginning of the rules or it may have no effect.
 		r = append(r, rule[1:]...)
 		err := t.iptables("-I", r)
 		if err != nil {
@@ -97,7 +97,7 @@ func (t BlackholeTask) Execute(stopCh chan struct{}) error {
 	return nil
 }
 
-func (t BlackholeTask) getHost(host string) ([]string, error) {
+func (t TargetedBlockerTask) getHost(host string) ([]string, error) {
 	if host == "" {
 		return nil, nil
 	} else if ipPattern.MatchString(host) {
@@ -110,14 +110,16 @@ func (t BlackholeTask) getHost(host string) ([]string, error) {
 func appendHosts(cmd []string, flag string, hosts ...string) []string {
 	ips := ""
 	for i, ip := range hosts {
-		if i > 0 { ips += ","}
+		if i > 0 {
+			ips += ","
+		}
 		ips += ip
 	}
-	
+
 	return append(cmd, "-d", ips)
 }
 
-func (t BlackholeTask) rules() ([][]string, error) {
+func (t TargetedBlockerTask) rules() ([][]string, error) {
 	rules := [][]string{}
 
 	for _, target := range t.opts.Targets {
@@ -127,7 +129,7 @@ func (t BlackholeTask) rules() ([][]string, error) {
 
 		var dsthosts []string
 		var direction, protocol, dports, sports string
-		
+
 		srchosts, err := t.getHost(target.SrcHost)
 		if err != nil {
 			return nil, err
@@ -179,9 +181,9 @@ func (t BlackholeTask) rules() ([][]string, error) {
 		} else {
 			return nil, bosherr.Errorf("Invalid destination port specified %v", target.SrcPorts)
 		}
-		
+
 		cmd := []string{direction}
-		
+
 		if dsthosts != nil {
 			cmd = appendHosts(cmd, "-d", dsthosts...)
 		}
@@ -197,20 +199,20 @@ func (t BlackholeTask) rules() ([][]string, error) {
 		if dports != "" {
 			cmd = append(cmd, "--dport", dports)
 		}
-		
+
 		if sports != "" {
 			cmd = append(cmd, "--sport", sports)
 		}
 
 		cmd = append(cmd, "-j", "DROP")
-		
+
 		rules = append(rules, cmd)
 	}
 
 	return rules, nil
 }
 
-func (t BlackholeTask) dig(hostname string) ([]string, error) {
+func (t TargetedBlockerTask) dig(hostname string) ([]string, error) {
 	args := []string{"+short", hostname}
 	output, _, _, err := t.cmdRunner.RunCommand("dig", args...)
 	if err != nil {
@@ -221,11 +223,11 @@ func (t BlackholeTask) dig(hostname string) ([]string, error) {
 	if ips == nil {
 		return nil, bosherr.Errorf("No IPs found for host %v", hostname)
 	}
-	
+
 	return ips, nil
 }
 
-func (t BlackholeTask) iptables(action string, rule []string) error {
+func (t TargetedBlockerTask) iptables(action string, rule []string) error {
 	args := append([]string{action}, rule...)
 
 	_, _, _, err := t.cmdRunner.RunCommand("iptables", args...)

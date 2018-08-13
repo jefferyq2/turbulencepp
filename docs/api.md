@@ -282,7 +282,7 @@ Example:
 }
 ```
 
-### Blackhole
+### TargetedBlocker
 
 Drops incoming and or outgoing traffic from one or more VMs. It is able to target specific IPs and Ports to simulate the failure of specific services.
 
@@ -303,7 +303,7 @@ Example:
 
 ```json
 {
-	"Type": "Blackhole",
+	"Type": "TargetedBlocker",
 	"Timeout": "10m", // Times may be suffixed with ms,s,m,h
 	"Targets": [{
 		"DstHost": "1.1.1.1",
