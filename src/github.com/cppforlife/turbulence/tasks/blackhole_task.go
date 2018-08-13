@@ -22,12 +22,16 @@ var ipPattern = regexp.MustCompile(`(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})(/\d{0,2
 var portPattern = regexp.MustCompile(`\d+(:\d+)?$`)
 
 // BlackholeTarget defines a rule for iptables. Each rule must contain one of {Host, DstPorts, SrcPorts}.
-// If DstPorts or SrcPorts ports are included without a Host, then those ports will be blocked for all hosts.
+// If DstPorts or SrcPorts ports are included without a DstHost or SrcHost, then those ports will be blocked for all hosts.
 // If Host is included without DstPorts or SrcPorts, then all traffic to/from those hosts will be blocked.
 type BlackholeTarget struct {
-	// Optional host to block, can specify an address such as "10.34.4.60", an address block such as "192.168.0.0/24",
+	// Optional destination host to block, can specify an address such as "10.34.4.60", an address block such as "192.168.0.0/24",
 	// or a domain name such as "google.com" which will be resolved to an Ip.
-	Host string
+	DstHost string
+
+	// Optional source host to block, can specify an address such as "10.34.4.60", an address block such as "192.168.0.0/24",
+	// or a domain name such as "google.com" which will be resolved to an Ip.
+	SrcHost string
 
 	// Optional direction to block traffic, must be in the set {INPUT, OUTPUT, BOTH}. Defaults to "BOTH".
 	Direction string
@@ -93,28 +97,45 @@ func (t BlackholeTask) Execute(stopCh chan struct{}) error {
 	return nil
 }
 
+func (t BlackholeTask) getHost(host string) ([]string, error) {
+	if host == "" {
+		return nil, nil
+	} else if ipPattern.MatchString(host) {
+		return ipPattern.FindAllString(host, -1), nil
+	} else {
+		return t.dig(host)
+	}
+}
+
+func appendHosts(cmd []string, flag string, hosts ...string) []string {
+	ips := ""
+	for i, ip := range hosts {
+		if i > 0 { ips += ","}
+		ips += ip
+	}
+	
+	return append(cmd, "-d", ips)
+}
+
 func (t BlackholeTask) rules() ([][]string, error) {
 	rules := [][]string{}
 
 	for _, target := range t.opts.Targets {
-		if target.Host == "" && target.DstPorts == "" && target.SrcPorts == "" {
-			return nil, bosherr.Error("Must specify at least one of Host, DstPorts, and or SrcPorts.")
+		if target.SrcHost == "" && target.DstHost == "" && target.DstPorts == "" && target.SrcPorts == "" {
+			return nil, bosherr.Error("Must specify at least one of SrcHost, DstHost, DstPorts, and or SrcPorts.")
 		}
 
-		var hosts []string
+		var dsthosts []string
 		var direction, protocol, dports, sports string
 		
-		if target.Host == "" {
-			hosts = nil
-		} else if ipPattern.MatchString(target.Host) {
-			hosts = ipPattern.FindAllString(target.Host, -1)
-		} else {
-			var err error
-			hosts, err = t.dig(target.Host)
-			
-			if err != nil {
-				return nil, err
-			}
+		srchosts, err := t.getHost(target.SrcHost)
+		if err != nil {
+			return nil, err
+		}
+
+		dsthosts, err = t.getHost(target.DstHost)
+		if err != nil {
+			return nil, err
 		}
 
 		switch strings.ToUpper(target.Direction) {
@@ -161,14 +182,12 @@ func (t BlackholeTask) rules() ([][]string, error) {
 		
 		cmd := []string{direction}
 		
-		if hosts != nil {
-			ips := ""
-			for i, ip := range hosts {
-				if i > 0 { ips += ","}
-				ips += ip
-			}
-			
-			cmd = append(cmd, "-s", ips)
+		if dsthosts != nil {
+			cmd = appendHosts(cmd, "-d", dsthosts...)
+		}
+
+		if srchosts != nil {
+			cmd = appendHosts(cmd, "-s", srchosts...)
 		}
 
 		if protocol != "" {
