@@ -290,9 +290,9 @@ Currently iptables is used for dropping packets from INPUT and OUTPUT chains.
 
 Target parameters:
 
+- set `Direction` (string; required) to the direction of traffic to drop, can be either "INPUT", "OUTPUT", or "FORWARD". If you are targeting diego-cells, then you will probably want "FORWARD".
 - set `Host` (string) to either an IPv4 address such as "192.168.1.50" or with a mask such as "192.168.0.0/24", or to a domain name which will be resolved into (possibly multiple) IPs such as "example.com" using the dig command. If no host is specified, then all hosts will be impacted.
-- set `Direction` (string) to the direction of traffic to drop, can be either "INPUT", "OUTPUT", or "BOTH". Defaults to "BOTH".
-- set `Protocol` (string) to the protocol to drop traffic on, can be either "udp", "tcp", "icmp", or "all". Defaults to "all".
+- set `Protocol` (string) to the protocol to drop traffic on, can be either "udp", "tcp", "icmp", or "all". Defaults to being unspecified.
 - set `DstPorts` (string) to the destination port to drop. This can be either a single port such as "8080" or a range such as "1503:1520". If blank, all destination ports will be dropped.
 - set `SrcPorts` (string) to the source ports to drop. This can be either a single port such as "8080" or a range such as "1503:1520". If blank, all source ports will be dropped.
 
@@ -310,7 +310,7 @@ Example:
 		"DstPorts": "53"
 	},{
 		"Host": "google.com",
-		"Direction": "BOTH",
+		"Direction": "FORWARD",
 		"Protocol": "tcp",
 		"DstPorts": "80"
 	}]

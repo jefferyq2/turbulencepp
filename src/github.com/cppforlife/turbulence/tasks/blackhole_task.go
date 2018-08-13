@@ -69,8 +69,10 @@ func (t BlackholeTask) Execute(stopCh chan struct{}) error {
 		return err
 	}
 
-	for _, r := range rules {
-		err := t.iptables("-A", r)
+	for _, rule := range rules {
+		r := []string{rule[0], "1"}  // we want it inserted at the beginning of the rules or it may have no effect.
+		r = append(r, rule[1:]...)
+		err := t.iptables("-I", r)
 		if err != nil {
 			return err
 		}
@@ -91,8 +93,9 @@ func (t BlackholeTask) Execute(stopCh chan struct{}) error {
 	return nil
 }
 
-func (t BlackholeTask) rules() ([]string, error) {
-	var rules []string
+func (t BlackholeTask) rules() ([][]string, error) {
+	rules := [][]string{}
+
 	for _, target := range t.opts.Targets {
 		if target.Host == "" && target.DstPorts == "" && target.SrcPorts == "" {
 			return nil, bosherr.Error("Must specify at least one of Host, DstPorts, and or SrcPorts.")
@@ -115,21 +118,19 @@ func (t BlackholeTask) rules() ([]string, error) {
 		}
 
 		switch strings.ToUpper(target.Direction) {
-		case "":
-			direction = ""
 		case "INPUT":
 			direction = "INPUT"
 		case "OUTPUT":
 			direction = "OUTPUT"
-		case "BOTH":
-			direction = ""
+		case "FORWARD":
+			direction = "FORWARD"
 		default:
-			return nil, bosherr.Errorf("Invalid direction '%v', must be one of {INPUT, OUTPUT, BOTH} or blank.", target.Direction)
+			return nil, bosherr.Errorf("Invalid direction '%v', must be one of {INPUT, OUTPUT, FORWARD}.", target.Direction)
 		}
 
 		switch strings.ToLower(target.Protocol) {
 		case "":
-			protocol = "all"
+			protocol = ""
 		case "tcp":
 			protocol = "tcp"
 		case "udp":
@@ -158,56 +159,33 @@ func (t BlackholeTask) rules() ([]string, error) {
 			return nil, bosherr.Errorf("Invalid destination port specified %v", target.SrcPorts)
 		}
 		
+		cmd := []string{direction}
 		
-		if direction == "" || direction == "INPUT" {
-			command := "INPUT"
-			
-			if hosts != nil {
-				command += " -s "
-				for i, ip := range hosts {
-					if i > 0 { command += ","}
-					command += ip
-				}
-			}
-
-			command += " -p " + protocol
-
-			if dports != "" {
-				command += " -dport " + dports
+		if hosts != nil {
+			ips := ""
+			for i, ip := range hosts {
+				if i > 0 { ips += ","}
+				ips += ip
 			}
 			
-			if sports != "" {
-				command += " -sport " + sports
-			}
-
-			command += " -j DROP"
-			rules = append(rules, command)
+			cmd = append(cmd, "-s", ips)
 		}
 
-		if direction == "" || direction == "OUTPUT" {
-			command := "OUTPUT"
-
-			if hosts != nil {
-				command += " -d "
-				for i, ip := range hosts {
-					if i > 0 { command += ","}
-					command += ip
-				}
-			}
-
-			command += " -p " + protocol
-
-			if dports != "" {
-				command += " -dport " + dports
-			}
-			
-			if sports != "" {
-				command += " -sport " + sports
-			}
-
-			command += " -j DROP"
-			rules = append(rules, command)
+		if protocol != "" {
+			cmd = append(cmd, "-p", protocol)
 		}
+
+		if dports != "" {
+			cmd = append(cmd, "--dport", dports)
+		}
+		
+		if sports != "" {
+			cmd = append(cmd, "--sport", sports)
+		}
+
+		cmd = append(cmd, "-j", "DROP")
+		
+		rules = append(rules, cmd)
 	}
 
 	return rules, nil
@@ -228,8 +206,8 @@ func (t BlackholeTask) dig(hostname string) ([]string, error) {
 	return ips, nil
 }
 
-func (t BlackholeTask) iptables(action, rule string) error {
-	args := append([]string{action}, strings.Split(rule, " ")...)
+func (t BlackholeTask) iptables(action string, rule []string) error {
+	args := append([]string{action}, rule...)
 
 	_, _, _, err := t.cmdRunner.RunCommand("iptables", args...)
 	if err != nil {
