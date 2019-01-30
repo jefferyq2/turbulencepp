@@ -146,18 +146,12 @@ func (t ControlNetTask) configureInterface(ifaceName string, opts []string) erro
 }
 
 func (t ControlNetTask) configureBandwidth(ifaceName string) error {
-	_, _, _, err := t.cmdRunner.RunCommand("tc", "qdisc", "add", "dev", ifaceName, "handle", "1:", "root", "htb", "default", "11")
+	_, _, _, err := t.cmdRunner.RunCommand("tc", "qdisc", "add", "dev", ifaceName, "handle", "1:", "root", "htb", "default", "1")
 	if err != nil {
 		return err
 	}
 
 	_, _, _, err = t.cmdRunner.RunCommand("tc", "class", "add", "dev", ifaceName, "parent", "1:", "classid", "1:1", "htb", "rate", t.opts.Bandwidth)
-	if err != nil {
-		t.resetIface(ifaceName)
-		return err
-	}
-
-	_, _, _, err = t.cmdRunner.RunCommand("tc", "class", "add", "dev", ifaceName, "parent", "1:1", "classid", "1:11", "htb", "rate", t.opts.Bandwidth)
 	if err != nil {
 		t.resetIface(ifaceName)
 		return err
