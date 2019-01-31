@@ -226,7 +226,7 @@ func (t ControlNetTask) configureDestination(ifaceName string) error {
 	}
 	
 	for _, rule := range rules {
-		args := []string{"filter", "add", "dev", ifaceName, "protocol", "ip", "parent", "1:", "prio", "1", "u32", "match"}
+		args := []string{"filter", "add", "dev", ifaceName, "protocol", "ip", "parent", "1:", "prio", "1", "u32"}
 		args = append(args, rule...)
 		args = append(args, []string{"flowid", "1:1"}...)
 
