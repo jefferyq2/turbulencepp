@@ -366,6 +366,9 @@ One or both of the following configurations must be selected:
   - set `Bandwidth` (string; required). Must be suffixed with one of `kbps`, `mbps` or `gbps`.
   - bandwidth limiting must be used without any other effects.
 
+In addition it is possible to apply a destination filter:
+  - set `Targets` (array, optional). Must include either `DstHost` or `DstPort`
+
 Example:
 
 ```json
@@ -373,7 +376,14 @@ Example:
 	"Type": "ControlNet",
 	"Timeout": "10m", // Times may be suffixed with ms,s,m,h
 
-	"Delay": "50ms"
+	"Delay": "50ms",
+	
+	"Targets": [
+	  {
+		"DstHost": "1.2.3.4",
+		"DstHost": "443"
+	  }
+	]
 }
 ```
 
