@@ -2,6 +2,7 @@ package tasks
 
 import (
 	"regexp"
+	"strings"
 
 	bosherr "github.com/cloudfoundry/bosh-utils/errors"
 	boshlog "github.com/cloudfoundry/bosh-utils/logger"
@@ -96,6 +97,7 @@ func (t ControlNetTask) Execute(stopCh chan struct{}) error {
 		for _, ifaceName := range ifaceNames {
 			err := t.configureBandwidth(ifaceName)
 			if err != nil {
+				t.resetIfaces(ifaceNames)
 				return err
 			}
 		}
@@ -128,6 +130,7 @@ func (t ControlNetTask) Execute(stopCh chan struct{}) error {
 		for _, ifaceName := range ifaceNames {
 			err := t.configureInterface(ifaceName, opts)
 			if err != nil {
+				t.resetIfaces(ifaceNames)
 				return err
 			}
 		}
@@ -138,14 +141,8 @@ func (t ControlNetTask) Execute(stopCh chan struct{}) error {
 	case <-stopCh:
 	}
 
-	for _, ifaceName := range ifaceNames {
-		err := t.resetIface(ifaceName)
-		if err != nil {
-			return err
-		}
-	}
 
-	return nil
+	return t.resetIfaces(ifaceNames)
 }
 
 func (t ControlNetTask) configureInterface(ifaceName string, opts []string) error {
@@ -172,7 +169,6 @@ func (t ControlNetTask) configureBandwidth(ifaceName string) error {
 
 	_, _, _, err = t.cmdRunner.RunCommand("tc", "class", "add", "dev", ifaceName, "parent", "1:", "classid", "1:1", "htb", "rate", t.opts.Bandwidth)
 	if err != nil {
-		t.resetIface(ifaceName)
 		return err
 	}
 
@@ -232,7 +228,6 @@ func (t ControlNetTask) configureDestination(ifaceName string) error {
 
 		_, _, _, err := t.cmdRunner.RunCommand("tc", args...)
 		if err != nil {
-			t.resetIface(ifaceName)
 			return err
 		}
 	}
@@ -240,10 +235,22 @@ func (t ControlNetTask) configureDestination(ifaceName string) error {
 	return nil
 }
 
-func (t ControlNetTask) resetIface(ifaceName string) error {
-	_, _, _, err := t.cmdRunner.RunCommand("tc", "qdisc", "del", "dev", ifaceName, "root")
-	if err != nil {
-		return bosherr.WrapError(err, "Resetting tc")
+func (t ControlNetTask) resetIfaces(ifaceNames []string) error {
+	errors := []error{}
+	for _, ifaceName := range ifaceNames {
+		_, _, _, err := t.cmdRunner.RunCommand("tc", "qdisc", "del", "dev", ifaceName, "root")
+		if err != nil {
+			errors = append(errors, err)
+		}
+	}
+
+	if len(errors) != 0 {
+		msgs := []string{}
+		for _, error := range errors {
+			msgs = append(msgs, error.Error())
+		}
+		
+		return bosherr.Errorf("Errors detected during reset: %s", strings.Join(msgs," "))
 	}
 
 	return nil
